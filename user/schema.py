@@ -49,6 +49,7 @@ class Query(graphene.ObjectType):
             return PDFModel.objects.none()
 
         if user:
+            print("user pdfs are being fetched")
             return PDFModel.objects.filter(user=user)
 
         return PDFModel.objects.none()
@@ -59,14 +60,14 @@ class SignInMutation(Mutation):
         password = String(required=True)
 
     success = graphene.Boolean()
-    user_id = graphene.Int()
+    username = graphene.String()
     token = graphene.String()
 
     def mutate(self, info, username, password):
         user = authenticate(username=username, password=password)
         if user:
             token = graphql_jwt.shortcuts.get_token(user)
-            return SignInMutation(success=True, user_id=user.id, token=token)
+            return SignInMutation(success=True, username=username, token=token)
 
 class SignOutMutation(Mutation):
     success = graphene.Boolean()
@@ -191,7 +192,6 @@ class DownvotePDF(graphene.Mutation):
             return DownvotePDF(success=False)
 
 class Mutation(graphene.ObjectType):
-    # ... other mutations
     upvote_pdf = UpvotePDF.Field()
     downvote_pdf = DownvotePDF.Field()
 

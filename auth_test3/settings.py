@@ -69,7 +69,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    # "http://localhost:3000",
+    "https://docin-k532hqkjb-ud11.vercel.app"
 ]
 
 ROOT_URLCONF = 'auth_test3.urls'
@@ -97,17 +98,29 @@ WSGI_APPLICATION = 'auth_test3.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'test',
+#         'USER': 'sealu',
+#         'PASSWORD': 'uddalak22',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'test',
-        'USER': 'sealu',
-        'PASSWORD': 'uddalak22',
-        'HOST': 'localhost',
+        'NAME': 'verceldb',
+        'USER': 'default',
+        'PASSWORD': '8nNd1VQiRDwW',
+        'HOST': 'ep-crimson-cloud-46743259-pooler.us-east-1.postgres.vercel-storage.com',
         'PORT': '5432',
-
     }
 }
+
 
 
 # Password validation

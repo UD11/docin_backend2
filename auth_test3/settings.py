@@ -70,7 +70,7 @@ AUTHENTICATION_BACKENDS = [
 
 CORS_ALLOWED_ORIGINS = [
     # "http://localhost:3000",
-    "https://docin-k532hqkjb-ud11.vercel.app"
+    "https://docin-2a4byxrfj-ud11.vercel.app"
 ]
 
 ROOT_URLCONF = 'auth_test3.urls'

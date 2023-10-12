@@ -69,8 +69,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    # "http://localhost:3000",
-    "https://docin.vercel.app"
+    "http://localhost:3000",
+    # "https://docin.vercel.app"
 ]
 
 # CORS_ALLOW_ALL_ORIGINS = True

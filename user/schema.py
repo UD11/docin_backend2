@@ -28,6 +28,7 @@ class UserProfileType(DjangoObjectType):
 class Query(graphene.ObjectType):
     search_pdfs = graphene.List(PDFType, query=graphene.String())
     search_pdfs_by_user = graphene.List(PDFType)
+    pdf_by_id = graphene.Field(PDFType, id=graphene.Int(required=True))
 
     def resolve_search_pdfs(self, info, query):
         if query:
@@ -53,6 +54,12 @@ class Query(graphene.ObjectType):
             return PDFModel.objects.filter(user=user)
 
         return PDFModel.objects.none()
+    @login_required
+    def resolve_pdf_by_id(self, info, id):
+        try:
+            return PDFModel.objects.get(pk=id)
+        except PDFModel.DoesNotExist:
+            return None
 
 class SignInMutation(Mutation):
     class Arguments:
@@ -191,11 +198,68 @@ class DownvotePDF(graphene.Mutation):
         except PDFModel.DoesNotExist:
             return DownvotePDF(success=False)
 
-class Mutation(graphene.ObjectType):
-    upvote_pdf = UpvotePDF.Field()
-    downvote_pdf = DownvotePDF.Field()
 
-schema = graphene.Schema(query=Query, mutation=Mutation, types=[UserProfileType, PDFType])
+class DeletePDF(graphene.Mutation):
+    class Arguments:
+        pdf_id = graphene.Int()
+
+    success = graphene.Boolean()
+
+    @login_required
+    def mutate(self, info, pdf_id):
+        user = info.context.user
+        try:
+            pdf = PDFModel.objects.get(pk=pdf_id)
+
+            # Check if the user has permission to delete this PDF
+            if pdf.user == user:
+                pdf.delete()
+                return DeletePDF(success=True)
+            else:
+                return DeletePDF(success=False)
+        except PDFModel.DoesNotExist:
+            return DeletePDF(success=False)
+
+
+class EditPDF(graphene.Mutation):
+    class Arguments:
+        pdf_id = graphene.Int(required=True)
+        title = graphene.String()
+        description = graphene.String()
+        link = graphene.String()
+        author = graphene.String()
+        institution_name = graphene.String()
+
+    pdf = graphene.Field(PDFType)
+
+    @login_required
+    def mutate(self, info, pdf_id, title=None, description=None, link=None, author=None, institution_name=None):
+        user = info.context.user
+
+        try:
+            pdf = PDFModel.objects.get(pk=pdf_id)
+
+            # Check if the user has permission to edit this PDF
+            if pdf.user != user:
+                return EditPDF(pdf=None)
+
+            if title:
+                pdf.title = title
+            if description:
+                pdf.description = description
+            if link:
+                pdf.link = link
+            if author:
+                pdf.author = author
+            if institution_name:
+                pdf.institution_name = institution_name
+
+            pdf.save()
+
+            return EditPDF(pdf=pdf)
+        except PDFModel.DoesNotExist:
+            return EditPDF(pdf=None)
+
 
 
 
@@ -210,5 +274,7 @@ class Mutation(graphene.ObjectType):
     create_pdf = CreatePDF.Field()
     upvote_pdf = UpvotePDF.Field()
     downvote_pdf = DownvotePDF.Field()
+    delete_pdf = DeletePDF.Field()
+    edit_pdf = EditPDF.Field()
 
 schema = graphene.Schema(query=Query, mutation=Mutation, types=[UserProfileType, PDFType])

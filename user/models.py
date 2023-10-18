@@ -16,3 +16,4 @@ class PDF(models.Model):
     downvote = models.PositiveIntegerField(default=0)
     upvotes = models.ManyToManyField(User, related_name='upvoted_pdfs')
     downvotes = models.ManyToManyField(User, related_name='downvoted_pdfs')
+    topic = models.CharField(max_length=100)

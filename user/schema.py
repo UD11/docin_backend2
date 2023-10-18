@@ -8,6 +8,8 @@ from django.contrib.auth import authenticate, logout
 from graphene import String, Mutation
 import graphql_jwt
 from graphql_jwt.decorators import login_required
+from django.db.models import F, Value
+from django.db.models.functions import Coalesce
 
 class PDFType(DjangoObjectType):
     class Meta:
@@ -29,11 +31,13 @@ class Query(graphene.ObjectType):
     search_pdfs = graphene.List(PDFType, query=graphene.String())
     search_pdfs_by_user = graphene.List(PDFType)
     pdf_by_id = graphene.Field(PDFType, id=graphene.Int(required=True))
+    top_pdfs = graphene.List(PDFType)
 
     def resolve_search_pdfs(self, info, query):
         if query:
             return PDFModel.objects.filter(
                 Q(title__icontains=query) |
+                Q(topic__icontains=query) |
                 Q(author__icontains=query) |
                 Q(description__icontains=query) |
                 Q(institution_name__icontains=query) |
@@ -54,12 +58,21 @@ class Query(graphene.ObjectType):
             return PDFModel.objects.filter(user=user)
 
         return PDFModel.objects.none()
-    @login_required
+
     def resolve_pdf_by_id(self, info, id):
         try:
             return PDFModel.objects.get(pk=id)
         except PDFModel.DoesNotExist:
             return None
+
+    def resolve_top_pdfs(self, info):
+        # Retrieve the top 10 PDFs with maximum vote difference
+        top_pdfs = PDFModel.objects.annotate(
+            vote_difference=Coalesce(F('upvote') - F('downvote'), Value(0))
+        ).filter(vote_difference__gt=0).order_by('-vote_difference')[:10]
+
+        return top_pdfs if top_pdfs.count() == 10 else []
+
 
 class SignInMutation(Mutation):
     class Arguments:
@@ -72,9 +85,12 @@ class SignInMutation(Mutation):
 
     def mutate(self, info, username, password):
         user = authenticate(username=username, password=password)
+        if not user:
+            return SignInMutation(success=False)
         if user:
             token = graphql_jwt.shortcuts.get_token(user)
             return SignInMutation(success=True, username=username, token=token)
+
 
 class SignOutMutation(Mutation):
     success = graphene.Boolean()
@@ -115,11 +131,12 @@ class CreatePDF(graphene.Mutation):
         link = graphene.String()
         author = graphene.String()
         institution_name = graphene.String()
+        topic = graphene.String()
 
     pdf = graphene.Field(PDFType)
 
     @login_required
-    def mutate(self, info, title, description, link, author, institution_name):
+    def mutate(self, info, title, description, link, author, institution_name,topic):
         user = info.context.user
 
         pdf = PDFModel(
@@ -129,6 +146,7 @@ class CreatePDF(graphene.Mutation):
             link=link,
             author=author,
             institution_name=institution_name,
+            topic=topic
         )
         pdf.save()
         return CreatePDF(pdf=pdf)
@@ -199,6 +217,9 @@ class DownvotePDF(graphene.Mutation):
             return DownvotePDF(success=False)
 
 
+
+
+
 class DeletePDF(graphene.Mutation):
     class Arguments:
         pdf_id = graphene.Int()
@@ -229,11 +250,12 @@ class EditPDF(graphene.Mutation):
         link = graphene.String()
         author = graphene.String()
         institution_name = graphene.String()
+        topic = graphene.String()
 
     pdf = graphene.Field(PDFType)
 
     @login_required
-    def mutate(self, info, pdf_id, title=None, description=None, link=None, author=None, institution_name=None):
+    def mutate(self, info, pdf_id, title=None, description=None, link=None, author=None, institution_name=None, topic=None):
         user = info.context.user
 
         try:
@@ -253,6 +275,8 @@ class EditPDF(graphene.Mutation):
                 pdf.author = author
             if institution_name:
                 pdf.institution_name = institution_name
+            if topic:
+                pdf.topic = topic
 
             pdf.save()
 
